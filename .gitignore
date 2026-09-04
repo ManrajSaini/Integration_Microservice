@@ -10,3 +10,12 @@ venv/
 .mypy_cache/
 dist/
 build/
+
+# Planning/reference docs — kept locally, not pushed to the remote
+architecture.md
+constitution.md
+details.md
+hubspot-reference.md
+plan.md
+projectRequirements.md
+solve.md
