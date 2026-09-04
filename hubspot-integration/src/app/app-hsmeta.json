@@ -1,0 +1,29 @@
+{
+  "uid": "hubspot_sync_app",
+  "type": "app",
+  "config": {
+    "name": "Integration Microservice",
+    "description": "Backend microservice syncing HubSpot CRM contacts, companies, and deals via OAuth2 and webhooks.",
+    "distribution": "private",
+    "auth": {
+      "type": "oauth",
+      "redirectUrls": ["http://localhost:8000/oauth/callback"],
+      "requiredScopes": [
+        "oauth",
+        "crm.objects.contacts.read",
+        "crm.objects.contacts.write",
+        "crm.objects.companies.read",
+        "crm.objects.companies.write",
+        "crm.objects.deals.read",
+        "crm.objects.deals.write"
+      ],
+      "optionalScopes": [],
+      "conditionallyRequiredScopes": []
+    },
+    "permittedUrls": {
+      "fetch": ["https://api.hubapi.com"],
+      "iframe": [],
+      "img": []
+    }
+  }
+}

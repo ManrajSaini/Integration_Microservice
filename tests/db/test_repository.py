@@ -23,10 +23,14 @@ async def session():
 
 
 async def test_upsert_install_creates_then_updates_same_row(session):
-    tokens = TokenSet(access_token="a1", refresh_token="r1", expires_in=1800, scopes=["oauth"])
+    tokens = TokenSet(
+        access_token="a1", refresh_token="r1", expires_in=1800, scopes=["oauth"], account_id="12345"
+    )
     first = await upsert_install(session, hub_id="12345", tokens=tokens)
 
-    tokens2 = TokenSet(access_token="a2", refresh_token="r1", expires_in=1800, scopes=["oauth"])
+    tokens2 = TokenSet(
+        access_token="a2", refresh_token="r1", expires_in=1800, scopes=["oauth"], account_id="12345"
+    )
     second = await upsert_install(session, hub_id="12345", tokens=tokens2)
 
     assert first.id == second.id
@@ -34,7 +38,9 @@ async def test_upsert_install_creates_then_updates_same_row(session):
 
 
 async def test_upsert_crm_record_is_idempotent(session):
-    tokens = TokenSet(access_token="a1", refresh_token="r1", expires_in=1800, scopes=["oauth"])
+    tokens = TokenSet(
+        access_token="a1", refresh_token="r1", expires_in=1800, scopes=["oauth"], account_id="12345"
+    )
     install = await upsert_install(session, hub_id="12345", tokens=tokens)
 
     record = CanonicalRecord(

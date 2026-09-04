@@ -8,6 +8,7 @@ class TokenSet(BaseModel):
     refresh_token: str
     expires_in: int
     scopes: list[str] = []
+    account_id: str
 
 
 class CanonicalRecord(BaseModel):

@@ -43,6 +43,7 @@ async def test_exchange_code_for_tokens_success():
     assert tokens.refresh_token == "rt-1"
     assert tokens.expires_in == 1800
     assert "oauth" in tokens.scopes
+    assert tokens.account_id == "12345"
 
 
 @respx.mock

@@ -12,5 +12,9 @@ class Settings(BaseSettings):
 
     app_base_url: str = "http://localhost:8000"
 
+    # Local-dev escape hatch for networks with TLS-inspecting proxies (e.g.
+    # corporate Netskope/Zscaler). Never set false outside local dev.
+    httpx_verify_ssl: bool = True
+
 
 settings = Settings()
