@@ -2,8 +2,8 @@ import httpx
 import pytest
 import respx
 
-from app.adapters.errors import NotFoundError, RateLimitedError
 from app.adapters.hubspot.crm import BASE_URL, HubSpotCrm
+from app.errors import NotFoundError, RateLimitedError
 
 crm = HubSpotCrm()
 

@@ -27,6 +27,8 @@ async def get_install_by_hub_id(session: AsyncSession, hub_id: str) -> Install |
 
 
 async def upsert_install(session: AsyncSession, hub_id: str, tokens: TokenSet) -> Install:
+    """Does not commit — callers are responsible for committing, same contract
+    as upsert_crm_record."""
     now = datetime.now(UTC)
     expires_at = now + timedelta(seconds=tokens.expires_in)
     install = await get_install_by_hub_id(session, hub_id)
@@ -51,14 +53,15 @@ async def upsert_install(session: AsyncSession, hub_id: str, tokens: TokenSet) -
         install.status = "active"
         install.updated_at = now
 
-    await session.commit()
-    await session.refresh(install)
+    await session.flush()
     return install
 
 
 async def upsert_crm_record(
     session: AsyncSession, install_id: int, object_type: str, record: CanonicalRecord
 ) -> Contact | Company | Deal:
+    """Does not commit — callers are responsible for committing, same contract
+    as upsert_install."""
     model = _CRM_MODELS[object_type]
     result = await session.execute(
         select(model).where(

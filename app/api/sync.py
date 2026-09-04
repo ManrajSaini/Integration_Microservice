@@ -2,21 +2,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters.errors import NotFoundError, ValidationError
-from app.adapters.hubspot.adapter import HubSpotAdapter
-from app.config import settings
 from app.db.repository import get_install_by_hub_id
 from app.db.session import get_session
+from app.errors import NotFoundError, ValidationError
+from app.orchestration.registry import ProviderAdapter, get_adapter
 from app.orchestration.sync import OBJECT_TYPES, run_sync
 
 router = APIRouter(tags=["sync"])
-
-hubspot_adapter = HubSpotAdapter(
-    client_id=settings.hubspot_client_id,
-    client_secret=settings.hubspot_client_secret,
-    redirect_uri=settings.hubspot_redirect_uri,
-    verify_ssl=settings.httpx_verify_ssl,
-)
 
 
 class SyncRequest(BaseModel):
@@ -34,7 +26,9 @@ class SyncRunResponse(BaseModel):
 
 @router.post("/sync")
 async def sync(
-    request: SyncRequest, session: AsyncSession = Depends(get_session)
+    request: SyncRequest,
+    session: AsyncSession = Depends(get_session),
+    adapter: ProviderAdapter = Depends(get_adapter),
 ) -> list[SyncRunResponse]:
     install = await get_install_by_hub_id(session, request.hub_id)
     if install is None:
@@ -45,7 +39,7 @@ async def sync(
     if invalid:
         raise ValidationError(f"Unknown object_types: {sorted(invalid)}")
 
-    runs = await run_sync(session, hubspot_adapter, install, object_types)
+    runs = await run_sync(session, adapter, install, object_types)
 
     return [
         SyncRunResponse(

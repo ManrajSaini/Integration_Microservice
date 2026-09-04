@@ -3,7 +3,7 @@ from datetime import datetime
 
 import httpx
 
-from app.adapters.errors import (
+from app.errors import (
     AuthenticationError,
     NotFoundError,
     RateLimitedError,

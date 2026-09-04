@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 
 import httpx
 
-from app.adapters.errors import AuthenticationError, TokenRefreshError, TransientProviderError
+from app.errors import AuthenticationError, TokenRefreshError, TransientProviderError
 from app.models.schemas import TokenSet
 
 logger = logging.getLogger(__name__)

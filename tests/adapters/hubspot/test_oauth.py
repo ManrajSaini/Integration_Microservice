@@ -2,8 +2,8 @@ import httpx
 import pytest
 import respx
 
-from app.adapters.errors import TokenRefreshError
 from app.adapters.hubspot.oauth import TOKEN_URL, HubSpotOAuth
+from app.errors import TokenRefreshError
 
 oauth = HubSpotOAuth(
     client_id="client-123",

@@ -36,7 +36,7 @@ async def sync_object_type(
     after: str | None = None
 
     while True:
-        install = await ensure_fresh_access_token(session, install)
+        install = await ensure_fresh_access_token(session, adapter, install)
 
         await rate_limiter.acquire()
         page = await with_provider_retry(adapter.fetch_page)(

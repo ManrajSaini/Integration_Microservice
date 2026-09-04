@@ -3,17 +3,19 @@ import uuid
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.adapters.errors import (
+from app.errors import (
     AuthenticationError,
     ConflictError,
     NotFoundError,
     RateLimitedError,
+    TokenRefreshError,
     TransientProviderError,
     ValidationError,
 )
 
 _STATUS_BY_ERROR: dict[type[Exception], tuple[int, str]] = {
     AuthenticationError: (401, "AUTHENTICATION_ERROR"),
+    TokenRefreshError: (401, "TOKEN_REFRESH_FAILED"),
     ValidationError: (400, "VALIDATION_ERROR"),
     NotFoundError: (404, "NOT_FOUND"),
     ConflictError: (409, "CONFLICT"),

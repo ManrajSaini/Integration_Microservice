@@ -1,6 +1,6 @@
 import pytest
 
-from app.adapters.errors import RateLimitedError, TransientProviderError, ValidationError
+from app.errors import RateLimitedError, TransientProviderError, ValidationError
 from app.orchestration.retry import make_provider_retry
 
 # Zero wait so tests don't actually sleep through exponential backoff.

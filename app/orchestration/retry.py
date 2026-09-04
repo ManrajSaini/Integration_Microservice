@@ -1,6 +1,6 @@
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
 
-from app.adapters.errors import RateLimitedError, TransientProviderError
+from app.errors import RateLimitedError, TransientProviderError
 
 
 def make_provider_retry(max_attempts: int = 5, wait_initial: float = 1, wait_max: float = 30):
