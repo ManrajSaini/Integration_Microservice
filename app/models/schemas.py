@@ -22,6 +22,13 @@ class CanonicalRecord(BaseModel):
     archived: bool = False
 
 
+class PageResult(BaseModel):
+    """One page of a paginated CRM object list."""
+
+    records: list[CanonicalRecord]
+    next_after: str | None = None
+
+
 class WebhookEvent(BaseModel):
     """Provider-agnostic representation of one webhook event."""
 

@@ -1,12 +1,7 @@
 from collections.abc import Mapping
 from typing import Protocol
 
-from app.models.schemas import CanonicalRecord, TokenSet, WebhookEvent
-
-
-class PageResult(Protocol):
-    records: list[CanonicalRecord]
-    next_after: str | None
+from app.models.schemas import CanonicalRecord, PageResult, TokenSet, WebhookEvent
 
 
 class ProviderAdapter(Protocol):
