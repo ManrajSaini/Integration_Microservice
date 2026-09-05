@@ -4,6 +4,7 @@ from app.api.crm import router as crm_router
 from app.api.errors import register_exception_handlers
 from app.api.oauth import router as oauth_router
 from app.api.sync import router as sync_router
+from app.api.webhook import router as webhook_router
 from app.logging import configure_logging
 
 configure_logging()
@@ -14,6 +15,7 @@ register_exception_handlers(app)
 app.include_router(oauth_router)
 app.include_router(sync_router)
 app.include_router(crm_router)
+app.include_router(webhook_router)
 
 
 @app.get("/health")

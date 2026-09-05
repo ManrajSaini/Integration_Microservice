@@ -8,34 +8,20 @@
     },
     "subscriptions": {
       "crmObjects": [
-        {
-          "subscriptionType": "object.creation",
-          "objectType": "contact",
-          "active": false
-        },
-        {
-          "subscriptionType": "object.propertyChange",
-          "objectType": "contact",
-          "propertyName": "firstname",
-          "active": false
-        }
-      ],
-      "legacyCrmObjects": [
-        {
-          "subscriptionType": "contact.propertyChange",
-          "propertyName": "lastname",
-          "active": false
-        },
-        {
-          "subscriptionType": "contact.deletion",
-          "active": false
-        }
-      ],
-      "hubEvents": [
-        {
-          "subscriptionType": "contact.privacyDeletion",
-          "active": false
-        }
+        { "subscriptionType": "object.creation", "objectType": "contact", "active": true },
+        { "subscriptionType": "object.deletion", "objectType": "contact", "active": true },
+        { "subscriptionType": "object.propertyChange", "objectType": "contact", "propertyName": "email", "active": true },
+        { "subscriptionType": "object.propertyChange", "objectType": "contact", "propertyName": "lifecyclestage", "active": true },
+
+        { "subscriptionType": "object.creation", "objectType": "company", "active": true },
+        { "subscriptionType": "object.deletion", "objectType": "company", "active": true },
+        { "subscriptionType": "object.propertyChange", "objectType": "company", "propertyName": "name", "active": true },
+        { "subscriptionType": "object.propertyChange", "objectType": "company", "propertyName": "domain", "active": true },
+
+        { "subscriptionType": "object.creation", "objectType": "deal", "active": true },
+        { "subscriptionType": "object.deletion", "objectType": "deal", "active": true },
+        { "subscriptionType": "object.propertyChange", "objectType": "deal", "propertyName": "dealstage", "active": true },
+        { "subscriptionType": "object.propertyChange", "objectType": "deal", "propertyName": "amount", "active": true }
       ]
     }
   }

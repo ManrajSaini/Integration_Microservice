@@ -1,0 +1,69 @@
+import base64
+import hashlib
+import hmac
+import json
+import logging
+from collections.abc import Mapping
+from datetime import UTC, datetime, timedelta
+
+from app.models.schemas import WebhookEvent
+
+logger = logging.getLogger(__name__)
+
+MAX_SIGNATURE_AGE = timedelta(minutes=5)
+
+SIGNATURE_HEADER = "X-HubSpot-Signature-v3"
+TIMESTAMP_HEADER = "X-HubSpot-Request-Timestamp"
+
+
+class HubSpotWebhooks:
+    """v3 signature verification and event parsing — details.md §5."""
+
+    def __init__(self, client_secret: str) -> None:
+        self.client_secret = client_secret
+
+    def verify_signature(
+        self, method: str, request_uri: str, headers: Mapping[str, str], raw_body: bytes
+    ) -> bool:
+        signature = headers.get(SIGNATURE_HEADER)
+        timestamp_header = headers.get(TIMESTAMP_HEADER)
+        if not signature or not timestamp_header:
+            return False
+
+        if not _is_timestamp_fresh(timestamp_header):
+            return False
+
+        expected = _compute_signature(self.client_secret, method, request_uri, raw_body, timestamp_header)
+        return hmac.compare_digest(expected, signature)
+
+    def parse_events(self, raw_body: bytes) -> list[WebhookEvent]:
+        payload = json.loads(raw_body)
+        return [_to_webhook_event(item) for item in payload]
+
+
+def _is_timestamp_fresh(timestamp_header: str) -> bool:
+    try:
+        timestamp_ms = int(timestamp_header)
+    except ValueError:
+        return False
+    sent_at = datetime.fromtimestamp(timestamp_ms / 1000, tz=UTC)
+    return datetime.now(UTC) - sent_at <= MAX_SIGNATURE_AGE
+
+
+def _compute_signature(
+    client_secret: str, method: str, request_uri: str, raw_body: bytes, timestamp_header: str
+) -> str:
+    base_string = method.upper().encode() + request_uri.encode() + raw_body + timestamp_header.encode()
+    digest = hmac.new(client_secret.encode(), base_string, hashlib.sha256).digest()
+    return base64.b64encode(digest).decode()
+
+
+def _to_webhook_event(item: dict) -> WebhookEvent:
+    return WebhookEvent(
+        event_id=str(item["eventId"]),
+        subscription_type=item["subscriptionType"],
+        object_id=str(item["objectId"]),
+        occurred_at=datetime.fromtimestamp(item["occurredAt"] / 1000, tz=UTC),
+        portal_id=str(item.get("portalId")) if item.get("portalId") is not None else None,
+        raw=item,
+    )

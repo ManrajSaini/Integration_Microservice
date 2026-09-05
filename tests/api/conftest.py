@@ -5,9 +5,10 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.db.models import Base, Install
-from app.db.session import get_session
+from app.db.session import get_session, get_session_factory
 from app.main import app
 from app.models.schemas import CanonicalRecord, PageResult, TokenSet
+from app.models.schemas import WebhookEvent as WebhookEventSchema
 from app.orchestration.registry import get_adapter
 
 
@@ -24,6 +25,11 @@ class FakeAdapter:
         self.refresh_error: Exception | None = None
         self.pages: dict[str, list[PageResult]] = {}
         self._page_calls: dict[str, int] = {}
+        self.fetch_one_result: CanonicalRecord | None = None
+        self.fetch_one_error: Exception | None = None
+        self.fetch_one_calls: list[tuple[str, str]] = []
+        self.signature_valid = True
+        self.parsed_events: list[WebhookEventSchema] = []
 
     async def build_authorize_url(self, state: str) -> str:
         return f"https://app.hubspot.com/oauth/authorize?state={state}"
@@ -45,6 +51,18 @@ class FakeAdapter:
         if idx < len(pages):
             return pages[idx]
         return PageResult(records=[], next_after=None)
+
+    async def fetch_one(self, object_type: str, access_token: str, object_id: str) -> CanonicalRecord:
+        self.fetch_one_calls.append((object_type, object_id))
+        if self.fetch_one_error:
+            raise self.fetch_one_error
+        return self.fetch_one_result
+
+    def verify_webhook_signature(self, method, request_uri, headers, raw_body) -> bool:
+        return self.signature_valid
+
+    def parse_webhook_events(self, raw_body: bytes) -> list[WebhookEventSchema]:
+        return self.parsed_events
 
 
 @pytest.fixture
@@ -72,8 +90,12 @@ def client(db_engine, fake_adapter):
     def override_get_adapter():
         return fake_adapter
 
+    def override_get_session_factory():
+        return session_factory
+
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_adapter] = override_get_adapter
+    app.dependency_overrides[get_session_factory] = override_get_session_factory
 
     with TestClient(app) as test_client:
         yield test_client

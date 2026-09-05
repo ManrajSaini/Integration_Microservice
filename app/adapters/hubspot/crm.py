@@ -67,6 +67,24 @@ class HubSpotCrm:
 
         return PageResult(records=records, next_after=next_after)
 
+    async def fetch_one(
+        self, object_type: str, access_token: str, object_id: str
+    ) -> CanonicalRecord:
+        params = {"properties": ",".join(OBJECT_PROPERTIES[object_type])}
+        url = f"{BASE_URL}/crm/v3/objects/{object_type}/{object_id}"
+
+        async with httpx.AsyncClient(verify=self.verify_ssl) as client:
+            try:
+                response = await client.get(
+                    url, params=params, headers={"Authorization": f"Bearer {access_token}"}
+                )
+            except httpx.TransportError as exc:
+                raise TransientProviderError(str(exc)) from exc
+
+        _raise_for_status(response)
+
+        return _to_canonical_record(object_type, response.json())
+
 
 def _to_canonical_record(object_type: str, item: dict) -> CanonicalRecord:
     return CanonicalRecord(
