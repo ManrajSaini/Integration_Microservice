@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Company, Contact, Deal, Install
+from app.errors import ValidationError
 from app.models.schemas import CanonicalRecord, TokenSet
 
 _CRM_MODELS: dict[str, type[Contact] | type[Company] | type[Deal]] = {
@@ -18,6 +19,20 @@ _PROMOTED_FIELDS: dict[str, tuple[str, ...]] = {
     "contacts": ("email", "firstname", "lastname", "lifecyclestage"),
     "companies": ("name", "domain"),
     "deals": ("dealname", "dealstage", "amount", "pipeline"),
+}
+
+# Columns the local read API allows sorting by, per object type — promoted
+# fields plus the two timestamp columns every CRM table has.
+_SORTABLE_FIELDS: dict[str, tuple[str, ...]] = {
+    object_type: (*fields, "hs_created_at", "hs_updated_at")
+    for object_type, fields in _PROMOTED_FIELDS.items()
+}
+
+# Friendlier public sort names (per the ?sort=updated_at requirement) mapped
+# to the actual column names.
+_SORT_ALIASES: dict[str, str] = {
+    "created_at": "hs_created_at",
+    "updated_at": "hs_updated_at",
 }
 
 
@@ -98,3 +113,39 @@ async def upsert_crm_record(
             setattr(row, field, value)
 
     return row
+
+
+async def list_crm_records(
+    session: AsyncSession,
+    object_type: str,
+    filters: dict[str, str] | None = None,
+    sort: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[Contact | Company | Deal]:
+    """Reads from the local DB only — never touches HubSpot. `filters` and
+    `sort` are restricted to each object type's promoted (indexed) columns."""
+    model = _CRM_MODELS[object_type]
+    allowed_fields = set(_PROMOTED_FIELDS[object_type])
+    sortable_fields = set(_SORTABLE_FIELDS[object_type])
+
+    query = select(model)
+
+    for field, value in (filters or {}).items():
+        if field not in allowed_fields:
+            raise ValidationError(f"Cannot filter {object_type} by '{field}'")
+        query = query.where(getattr(model, field) == value)
+
+    if sort:
+        descending = sort.startswith("-")
+        field = sort.lstrip("-")
+        field = _SORT_ALIASES.get(field, field)
+        if field not in sortable_fields:
+            raise ValidationError(f"Cannot sort {object_type} by '{sort.lstrip('-')}'")
+        column = getattr(model, field)
+        query = query.order_by(column.desc() if descending else column.asc())
+
+    query = query.limit(limit).offset(offset)
+
+    result = await session.execute(query)
+    return list(result.scalars().all())
