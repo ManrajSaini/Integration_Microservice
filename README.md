@@ -107,6 +107,19 @@ uvicorn app.main:app --port 8000
 
 Visit `http://localhost:8000/health` to confirm it's running.
 
+### 6a. Or run it with Docker
+
+Skips steps 2, 5, and 6 above — the container installs dependencies and runs
+migrations automatically on startup:
+
+```bash
+docker compose up --build
+```
+
+This builds the image, runs `alembic upgrade head`, and starts the API on
+`http://localhost:8000`, backed by a named Docker volume (`sqlite_data`) so
+data survives container restarts. Requires `.env` to already exist (step 4).
+
 ### 7. (Optional) Wire up webhooks
 
 Webhooks require a public HTTPS URL — `localhost` won't work.

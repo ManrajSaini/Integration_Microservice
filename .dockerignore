@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.env
+*.db
+hubspot-integration/
+images/
+tests/
+*.md
