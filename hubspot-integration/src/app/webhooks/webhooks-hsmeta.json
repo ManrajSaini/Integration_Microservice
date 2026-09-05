@@ -3,7 +3,7 @@
   "type": "webhooks",
   "config": {
     "settings": {
-      "targetUrl": "https://670f-171-76-87-198.ngrok-free.app/webhook",
+      "targetUrl": "https://trainless-alissa-nonidiomatically.ngrok-free.dev/webhook",
       "maxConcurrentRequests": 10
     },
     "subscriptions": {
