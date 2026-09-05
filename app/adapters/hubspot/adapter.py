@@ -40,7 +40,7 @@ class HubSpotAdapter:
     async def push_record(
         self, object_type: str, access_token: str, record: CanonicalRecord
     ) -> CanonicalRecord:
-        raise NotImplementedError("Bidirectional sync is not yet implemented (Phase 10 bonus)")
+        return await self._crm.push_record(object_type, access_token, record)
 
     def verify_webhook_signature(
         self, method: str, request_uri: str, headers: Mapping[str, str], raw_body: bytes

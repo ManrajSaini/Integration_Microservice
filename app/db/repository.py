@@ -115,6 +115,19 @@ async def upsert_crm_record(
     return row
 
 
+async def get_crm_record(
+    session: AsyncSession, install_id: int, object_type: str, hubspot_object_id: str
+) -> Contact | Company | Deal | None:
+    model = _CRM_MODELS[object_type]
+    result = await session.execute(
+        select(model).where(
+            model.install_id == install_id,
+            model.hubspot_object_id == hubspot_object_id,
+        )
+    )
+    return result.scalar_one_or_none()
+
+
 async def list_crm_records(
     session: AsyncSession,
     object_type: str,

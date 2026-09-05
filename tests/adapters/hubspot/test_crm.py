@@ -3,7 +3,8 @@ import pytest
 import respx
 
 from app.adapters.hubspot.crm import BASE_URL, HubSpotCrm
-from app.errors import NotFoundError, RateLimitedError
+from app.errors import ConflictError, NotFoundError, RateLimitedError
+from app.models.schemas import CanonicalRecord
 
 crm = HubSpotCrm()
 
@@ -66,3 +67,53 @@ async def test_fetch_page_404_raises_not_found_error():
 
     with pytest.raises(NotFoundError):
         await crm.fetch_page("companies", access_token="at-1", after=None)
+
+
+@respx.mock
+async def test_push_record_patches_and_returns_updated_record():
+    route = respx.patch(f"{BASE_URL}/crm/v3/objects/contacts/999").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "999",
+                "properties": {"email": "new@example.com", "firstname": "Ada"},
+                "createdAt": "2026-01-01T00:00:00Z",
+                "updatedAt": "2026-01-03T00:00:00Z",
+                "archived": False,
+            },
+        )
+    )
+    outgoing = CanonicalRecord(
+        external_id="999", object_type="contacts", properties={"email": "new@example.com"}
+    )
+
+    updated = await crm.push_record("contacts", access_token="at-1", record=outgoing)
+
+    assert route.called
+    assert route.calls.last.request.headers["Authorization"] == "Bearer at-1"
+    assert updated.external_id == "999"
+    assert updated.properties["email"] == "new@example.com"
+
+
+@respx.mock
+async def test_push_record_404_raises_not_found_error():
+    respx.patch(f"{BASE_URL}/crm/v3/objects/contacts/999").mock(
+        return_value=httpx.Response(404, json={"status": "error", "message": "not found"})
+    )
+    outgoing = CanonicalRecord(external_id="999", object_type="contacts", properties={})
+
+    with pytest.raises(NotFoundError):
+        await crm.push_record("contacts", access_token="at-1", record=outgoing)
+
+
+@respx.mock
+async def test_push_record_409_raises_conflict_error():
+    respx.patch(f"{BASE_URL}/crm/v3/objects/contacts/999").mock(
+        return_value=httpx.Response(
+            409, json={"status": "error", "message": "Contact already exists"}
+        )
+    )
+    outgoing = CanonicalRecord(external_id="999", object_type="contacts", properties={})
+
+    with pytest.raises(ConflictError):
+        await crm.push_record("contacts", access_token="at-1", record=outgoing)

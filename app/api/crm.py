@@ -1,8 +1,12 @@
 from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.repository import list_crm_records
+from app.db.repository import get_install_by_hub_id, list_crm_records
 from app.db.session import get_session
+from app.errors import NotFoundError
+from app.orchestration.push import push_local_changes
+from app.orchestration.registry import ProviderAdapter, get_adapter
 
 router = APIRouter(tags=["crm"])
 
@@ -95,3 +99,61 @@ async def list_deals(
         limit,
         offset,
     )
+
+
+class PushRequest(BaseModel):
+    hub_id: str
+    properties: dict[str, str | None]
+
+
+async def _push_object_type(
+    object_type: str,
+    hubspot_object_id: str,
+    request: PushRequest,
+    session: AsyncSession,
+    adapter: ProviderAdapter,
+) -> dict:
+    install = await get_install_by_hub_id(session, request.hub_id)
+    if install is None:
+        raise NotFoundError(f"No install found for hub_id={request.hub_id}")
+
+    row = await push_local_changes(
+        session, adapter, install, object_type, hubspot_object_id, request.properties
+    )
+    return {
+        "id": row.hubspot_object_id,
+        "properties": row.properties,
+        "created_at": row.hs_created_at,
+        "updated_at": row.hs_updated_at,
+        "archived": row.archived,
+    }
+
+
+@router.patch("/contacts/{hubspot_object_id}")
+async def push_contact(
+    hubspot_object_id: str,
+    request: PushRequest,
+    session: AsyncSession = Depends(get_session),
+    adapter: ProviderAdapter = Depends(get_adapter),
+) -> dict:
+    return await _push_object_type("contacts", hubspot_object_id, request, session, adapter)
+
+
+@router.patch("/companies/{hubspot_object_id}")
+async def push_company(
+    hubspot_object_id: str,
+    request: PushRequest,
+    session: AsyncSession = Depends(get_session),
+    adapter: ProviderAdapter = Depends(get_adapter),
+) -> dict:
+    return await _push_object_type("companies", hubspot_object_id, request, session, adapter)
+
+
+@router.patch("/deals/{hubspot_object_id}")
+async def push_deal(
+    hubspot_object_id: str,
+    request: PushRequest,
+    session: AsyncSession = Depends(get_session),
+    adapter: ProviderAdapter = Depends(get_adapter),
+) -> dict:
+    return await _push_object_type("deals", hubspot_object_id, request, session, adapter)

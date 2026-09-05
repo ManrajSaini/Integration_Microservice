@@ -5,6 +5,7 @@ import httpx
 
 from app.errors import (
     AuthenticationError,
+    ConflictError,
     NotFoundError,
     RateLimitedError,
     TransientProviderError,
@@ -85,6 +86,27 @@ class HubSpotCrm:
 
         return _to_canonical_record(object_type, response.json())
 
+    async def push_record(
+        self, object_type: str, access_token: str, record: CanonicalRecord
+    ) -> CanonicalRecord:
+        """PATCH an existing HubSpot object with local changes — bidirectional
+        sync (bonus). record.external_id must be a HubSpot object ID already
+        known to us (i.e. previously fetched via /sync or a webhook)."""
+        url = f"{BASE_URL}/crm/v3/objects/{object_type}/{record.external_id}"
+        body = {"properties": record.properties}
+
+        async with httpx.AsyncClient(verify=self.verify_ssl) as client:
+            try:
+                response = await client.patch(
+                    url, json=body, headers={"Authorization": f"Bearer {access_token}"}
+                )
+            except httpx.TransportError as exc:
+                raise TransientProviderError(str(exc)) from exc
+
+        _raise_for_status(response)
+
+        return _to_canonical_record(object_type, response.json())
+
 
 def _to_canonical_record(object_type: str, item: dict) -> CanonicalRecord:
     return CanonicalRecord(
@@ -117,6 +139,8 @@ def _raise_for_status(response: httpx.Response) -> None:
         raise AuthenticationError(message)
     if response.status_code == 404:
         raise NotFoundError(message)
+    if response.status_code == 409:
+        raise ConflictError(message)
     if response.status_code == 429:
         raise RateLimitedError(message)
     if response.status_code >= 500:

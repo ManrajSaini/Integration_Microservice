@@ -28,6 +28,9 @@ class FakeAdapter:
         self.fetch_one_result: CanonicalRecord | None = None
         self.fetch_one_error: Exception | None = None
         self.fetch_one_calls: list[tuple[str, str]] = []
+        self.push_result: CanonicalRecord | None = None
+        self.push_error: Exception | None = None
+        self.push_calls: list[tuple[str, dict]] = []
         self.signature_valid = True
         self.parsed_events: list[WebhookEventSchema] = []
 
@@ -57,6 +60,14 @@ class FakeAdapter:
         if self.fetch_one_error:
             raise self.fetch_one_error
         return self.fetch_one_result
+
+    async def push_record(
+        self, object_type: str, access_token: str, record: CanonicalRecord
+    ) -> CanonicalRecord:
+        self.push_calls.append((object_type, record.properties))
+        if self.push_error:
+            raise self.push_error
+        return self.push_result
 
     def verify_webhook_signature(self, method, request_uri, headers, raw_body) -> bool:
         return self.signature_valid

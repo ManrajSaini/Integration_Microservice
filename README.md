@@ -232,6 +232,25 @@ curl "http://localhost:8000/companies?domain=acme.com"
 Common query params on all three: `sort` (prefix with `-` for descending,
 e.g. `-updated_at`), `limit` (default 50, max 100), `offset` (default 0).
 
+### `PATCH /contacts/{id}`, `PATCH /companies/{id}`, `PATCH /deals/{id}` (bonus: bidirectional sync)
+Pushes local property changes back to HubSpot via `PATCH
+/crm/v3/objects/{object}/{id}`, then re-upserts the record locally from
+HubSpot's authoritative response — so the local row always reflects exactly
+what HubSpot stored, not just what was requested. `{id}` is the HubSpot
+object ID (must already exist locally, i.e. previously seen via `/sync` or a
+webhook — run `/sync` first if you get a 404).
+
+```bash
+curl -X PATCH http://localhost:8000/contacts/546574515938 \
+  -H "Content-Type: application/json" \
+  -d '{"hub_id": "12345678", "properties": {"phone": "555-0100"}}'
+```
+
+| Body field | Required | Description |
+|---|---|---|
+| `hub_id` | Yes | The installed portal's HubSpot ID |
+| `properties` | Yes | Property name → value map to update on HubSpot |
+
 ### Error responses
 
 Every error (from HubSpot, or from this service's own validation) is mapped
