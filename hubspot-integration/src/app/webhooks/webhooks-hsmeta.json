@@ -3,7 +3,7 @@
   "type": "webhooks",
   "config": {
     "settings": {
-      "targetUrl": "https://example.com/webhook",
+      "targetUrl": "https://670f-171-76-87-198.ngrok-free.app/webhook",
       "maxConcurrentRequests": 10
     },
     "subscriptions": {

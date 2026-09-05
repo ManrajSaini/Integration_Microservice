@@ -83,6 +83,7 @@ class WebhookEvent(Base):
     provider: Mapped[str] = mapped_column(default="hubspot")
     event_id: Mapped[str]
     subscription_type: Mapped[str]
+    object_type: Mapped[str | None]  # contacts | companies | deals — resolved by the adapter
     object_id: Mapped[str]
     occurred_at: Mapped[datetime]
     payload: Mapped[dict] = mapped_column(JSON)

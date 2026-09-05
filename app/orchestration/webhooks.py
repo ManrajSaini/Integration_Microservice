@@ -15,19 +15,6 @@ from app.orchestration.retry import with_provider_retry
 
 logger = logging.getLogger(__name__)
 
-# HubSpot's subscriptionType prefix (e.g. "contact" in "contact.propertyChange")
-# mapped to our local object_type / table name.
-_SUBSCRIPTION_OBJECT_TYPE: dict[str, str] = {
-    "contact": "contacts",
-    "company": "companies",
-    "deal": "deals",
-}
-
-
-def _object_type_for_subscription(subscription_type: str) -> str | None:
-    prefix = subscription_type.split(".", 1)[0]
-    return _SUBSCRIPTION_OBJECT_TYPE.get(prefix)
-
 
 async def persist_webhook_events(
     session: AsyncSession,
@@ -48,6 +35,7 @@ async def persist_webhook_events(
             provider="hubspot",
             event_id=event.event_id,
             subscription_type=event.subscription_type,
+            object_type=event.object_type,
             object_id=event.object_id,
             occurred_at=event.occurred_at,
             payload=event.raw,
@@ -76,12 +64,13 @@ async def process_webhook_event(
     if row is None:
         return
 
-    object_type = _object_type_for_subscription(row.subscription_type)
-    if object_type is None or row.install_id is None:
-        row.processing_error = f"Unrecognized subscription_type or unknown install: {row.subscription_type}"
+    if row.object_type is None or row.install_id is None:
+        row.processing_error = f"Unrecognized object type or unknown install for event {row.event_id}"
         row.processed_at = datetime.now(UTC)
         await session.commit()
         return
+
+    object_type = row.object_type
 
     try:
         install = await _load_install(session, row.install_id)

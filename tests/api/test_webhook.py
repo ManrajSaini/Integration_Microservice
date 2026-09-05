@@ -8,10 +8,17 @@ from app.models.schemas import CanonicalRecord
 from app.models.schemas import WebhookEvent as WebhookEventSchema
 
 
-def _event(event_id="1", subscription_type="contact.propertyChange", object_id="999", portal_id="12345"):
+def _event(
+    event_id="1",
+    subscription_type="object.propertyChange",
+    object_type="contacts",
+    object_id="999",
+    portal_id="12345",
+):
     return WebhookEventSchema(
         event_id=event_id,
         subscription_type=subscription_type,
+        object_type=object_type,
         object_id=object_id,
         occurred_at=datetime.now(UTC),
         portal_id=portal_id,

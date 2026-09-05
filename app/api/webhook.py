@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.config import settings
 from app.db.session import get_session, get_session_factory
 from app.orchestration.registry import ProviderAdapter, get_adapter
 from app.orchestration.webhooks import persist_webhook_events, process_webhook_event
@@ -30,7 +31,11 @@ async def webhook(
     session_factory: async_sessionmaker[AsyncSession] = Depends(get_session_factory),
 ) -> Response:
     raw_body = await request.body()
-    request_uri = request.url.path
+    # HubSpot signs the full public URL it was configured to POST to (the
+    # app_base_url + path), not the path our server sees internally — this
+    # matters whenever the public URL differs from how the request looks
+    # locally (e.g. behind ngrok or any reverse proxy). See solve.md.
+    request_uri = f"{settings.app_base_url.rstrip('/')}{request.url.path}"
     if request.url.query:
         request_uri += f"?{request.url.query}"
 

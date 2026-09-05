@@ -124,8 +124,61 @@ def test_parse_events_maps_fields_correctly():
     assert event.event_id == "3816279340"
     assert event.object_id == "1246965"
     assert event.subscription_type == "contact.propertyChange"
+    assert event.object_type == "contacts"  # resolved via legacy prefix fallback
     assert event.portal_id == "33"
     assert event.raw["propertyName"] == "lifecyclestage"
+
+
+def test_parse_events_resolves_object_type_from_object_type_id():
+    """Regression test: real HubSpot Projects-platform webhooks use the
+    generic 'object.propertyChange' subscriptionType with a separate
+    objectTypeId field (e.g. "0-1" for contacts) — not the legacy
+    "contact.propertyChange" prefix format. See solve.md Phase 7 entry."""
+    webhooks = HubSpotWebhooks(client_secret=CLIENT_SECRET)
+    raw_body = json.dumps(
+        [
+            {
+                "eventId": 1765889350,
+                "subscriptionId": 7662269,
+                "portalId": 247279312,
+                "appId": 51879189,
+                "occurredAt": 1788597072520,
+                "subscriptionType": "object.propertyChange",
+                "attemptNumber": 0,
+                "objectId": 546500061938,
+                "objectTypeId": "0-1",
+                "propertyName": "email",
+                "propertyValue": "bhalli@hubspot.com",
+                "changeSource": "CRM_UI",
+                "sourceId": "userId:98499705",
+                "isSensitive": False,
+            }
+        ]
+    ).encode()
+
+    events = webhooks.parse_events(raw_body)
+
+    assert len(events) == 1
+    assert events[0].object_type == "contacts"
+
+
+def test_parse_events_unrecognized_object_type_id_yields_none():
+    webhooks = HubSpotWebhooks(client_secret=CLIENT_SECRET)
+    raw_body = json.dumps(
+        [
+            {
+                "eventId": 1,
+                "objectId": 1,
+                "objectTypeId": "0-999",
+                "subscriptionType": "object.propertyChange",
+                "occurredAt": 1462216307945,
+            }
+        ]
+    ).encode()
+
+    events = webhooks.parse_events(raw_body)
+
+    assert events[0].object_type is None
 
 
 def test_parse_events_handles_batch_of_multiple():

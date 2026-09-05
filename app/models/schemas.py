@@ -34,6 +34,7 @@ class WebhookEvent(BaseModel):
 
     event_id: str
     subscription_type: str
+    object_type: str | None = None
     object_id: str
     occurred_at: datetime
     portal_id: str | None = None

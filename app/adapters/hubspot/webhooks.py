@@ -58,10 +58,37 @@ def _compute_signature(
     return base64.b64encode(digest).decode()
 
 
+# HubSpot's standard CRM object-type IDs (Projects-platform webhook payloads
+# carry these in objectTypeId; legacy payloads instead prefix subscriptionType
+# with the object name, e.g. "contact.propertyChange" — support both).
+_OBJECT_TYPE_ID_TO_LOCAL: dict[str, str] = {
+    "0-1": "contacts",
+    "0-2": "companies",
+    "0-3": "deals",
+}
+_LEGACY_SUBSCRIPTION_PREFIX_TO_LOCAL: dict[str, str] = {
+    "contact": "contacts",
+    "company": "companies",
+    "deal": "deals",
+}
+
+
+def _resolve_object_type(item: dict) -> str | None:
+    object_type_id = item.get("objectTypeId")
+    if object_type_id is not None:
+        resolved = _OBJECT_TYPE_ID_TO_LOCAL.get(str(object_type_id))
+        if resolved is not None:
+            return resolved
+
+    prefix = item["subscriptionType"].split(".", 1)[0]
+    return _LEGACY_SUBSCRIPTION_PREFIX_TO_LOCAL.get(prefix)
+
+
 def _to_webhook_event(item: dict) -> WebhookEvent:
     return WebhookEvent(
         event_id=str(item["eventId"]),
         subscription_type=item["subscriptionType"],
+        object_type=_resolve_object_type(item),
         object_id=str(item["objectId"]),
         occurred_at=datetime.fromtimestamp(item["occurredAt"] / 1000, tz=UTC),
         portal_id=str(item.get("portalId")) if item.get("portalId") is not None else None,
