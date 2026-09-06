@@ -22,11 +22,18 @@ because it's the only one that offers, at no cost:
 
 ## Architecture at a glance
 
-```
-Client → API layer (FastAPI) → Orchestration engine → HubSpot adapter → HubSpot API
-                                       ↓
-                                  Local database
-```
+**Layered system** — every request flows through the same stack, and adding a
+new provider (Slack, Salesforce, …) means writing one new adapter, not
+touching the engine:
+
+![Layered architecture: Client → API layer → Core orchestration engine → Provider adapters (HubSpot active, new adapters pluggable) → external APIs / unified data source](images/image1.png)
+
+**Request flows** — OAuth install, a scheduled sync, and an incoming webhook
+all converge on the same orchestration engine and the same HubSpot adapter,
+which is what keeps auth, rate-limiting, retries, and dedup logic in exactly
+one place regardless of which flow triggered them:
+
+![Three request flows (OAuth install, schedule sync, webhook received) converging on the core orchestration engine, through the HubSpot adapter, to HubSpot's API and the unified data source](images/image2.png)
 
 - **API layer** (`app/api/`) — thin FastAPI routers; no business logic, no
   direct calls to HubSpot.
@@ -317,9 +324,10 @@ directly to the client:
 pytest
 ```
 
-55 tests cover: OAuth token exchange/refresh (mocked HTTP via `respx`),
+62 tests cover: OAuth token exchange/refresh (mocked HTTP via `respx`),
 pagination and error mapping in the CRM adapter, retry/backoff behavior with
 a fake adapter, rate-limiter throttling, idempotent upserts, webhook
-signature verification (valid/tampered/stale/wrong-secret), and full
-API-level flows (`/sync`, `/webhook`, `/contacts`) via FastAPI's `TestClient`
-with dependency-injected fakes — no test ever calls the real HubSpot API.
+signature verification (valid/tampered/stale/wrong-secret), bidirectional
+push (success/404/409), and full API-level flows (`/sync`, `/webhook`,
+`/contacts`, `/contacts/{id}` push) via FastAPI's `TestClient` with
+dependency-injected fakes — no test ever calls the real HubSpot API.
